@@ -47,6 +47,21 @@ controller = SimplePIController(0.1, 0.002)
 set_speed = 9
 controller.set_desired(set_speed)
 
+def crop_roi(image):
+    img = image[55:121, 50:250, :]
+    return img
+
+def preprocess_image(image):
+    # crop the ROI
+    img = crop_roi(image)
+    
+    # convert RGB to BGR
+    img = img[...,::-1]
+
+    # Apply colorspace conversion from BGR to YUV
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+
+    return img
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -61,7 +76,8 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
-        steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
+        img = preprocess_image(image_array)
+        steering_angle = float(model.predict(img[None, :, :, :], batch_size=1))
 
         throttle = controller.update(float(speed))
 
